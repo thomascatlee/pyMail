@@ -3,6 +3,9 @@
 import pyMail
 import getpass
 import time
+import os
+import filename
+
 # 推荐使用qq邮箱
 username = raw_input("User: ")
 passwd = getpass.getpass()
@@ -18,25 +21,35 @@ sml.sendMail()
 
 # 初始化接收邮件类
 rml = pyMail.ReceiveMailDealer(username, passwd, imap_server)
+
+account_dir = os.getcwd() + '/email/' + username
+
 rml.select('INBOX')
-# 延时2秒再读取邮件
-time.sleep(2)
-# 获取未读邮件列表
-print(rml.getUnread())
-#('OK',['1 2 3 4'])
-# 遍历未读邮件
-# print rml.search(None, 'ALL')
-#()
-for num in rml.getUnread()[1][0].split(' '):
-    if num != '':
+
+box_dir = account_dir + '/' + 'INBOX'
+
+os.makedirs(box_dir, exist_ok=True)
+os.chdir(box_dir)
+
+for num in rml.search(None,"All")[1][0].split(b' '):
+    if num != b'':
         mailInfo = rml.getMailInfo(num)
-        print(rml.delete([num]))
-        print(mailInfo['subject'])
-        print(mailInfo['body'])
-        print(mailInfo['html'])
-        print(mailInfo['from'])
-        print(mailInfo['to'])
-        print(mailInfo['attachments'])
+
+        print(num)
+
+        os.chdir(box_dir)
+
+        #保存邮件到eml文件
+        name = filename.getWindowsName(mailInfo['subject'] + '-' + mailInfo['date'])
+        with open((name + '.eml'), 'wb') as fp:
+            fp.write(mailInfo['eml'])
+
+        #如果有附件则建立文件夹
+        if len(mailInfo['attachments']) > 0:
+            email_dir = os.path.join(box_dir, name)
+            os.makedirs(email_dir, exist_ok=True)
+            os.chdir(email_dir)
+
         # 遍历附件列表
         for attachment in mailInfo['attachments']:
             fileob = open(attachment['name'], 'wb')
